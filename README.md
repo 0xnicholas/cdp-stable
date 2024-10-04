@@ -80,8 +80,8 @@ s = collateral \times (\frac{softLiqUpperLimit-softLiqLowerLimit}{2})
 $$
 
 其中，
-- $ s $, 估算将所有存入抵押品按不同价格段进行转换后，有多少$STABL
-- $ liqD $, 协议设置的清算折扣 (抵押品价值的贴现值)
+- $s$, 估算将所有存入抵押品按不同价格段进行转换后，有多少$STABL
+- $liqD$, 协议设置的清算折扣 (抵押品价值的贴现值)
 - $ p $, 当前预言机价格减去在清算范围内的最高价格区间设置的价格，乘以抵押品数量。如果贷款已进入抵押品转换（soft liq），则 p 设置为 0
     - $ collateral $, 抵押品数量
     - $ abovePriceSegs $, 预言机价格与用户软清算区间顶端（upper limit of top segment）的价差。
