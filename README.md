@@ -69,9 +69,13 @@ STABL是一种基于抵押的稳定币，这就是说STABL的价值由其他资�
 
 #### Loan health
 
-$$health = \frac{s\times(1-liqD)+p}{debt}-1$$
-$$p = collateral \times abovePriceSegs$$
-$$s = collateral \times (\frac{softLiqUpperLimit-softLiqLowerLimit}{2})$$
+$$
+health = \frac{s\times(1-liqD)+p}{debt}-1 \\
+
+p = collateral \times abovePriceSegs \\
+
+s = collateral \times (\frac{softLiqUpperLimit-softLiqLowerLimit}{2})
+$$
 
 其中，
 - $s$, 估算将所有存入抵押品按不同价格段进行转换后，有多少$STABL
