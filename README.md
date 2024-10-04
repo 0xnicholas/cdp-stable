@@ -70,11 +70,13 @@ STABL是一种基于抵押的稳定币，这就是说STABL的价值由其他资�
 #### Loan health
 
 $$
-\begin
-health = \frac{s\times(1-liqD)+p}{debt}-1 \\
-p = collateral \times abovePriceSegs \\
+health = \frac{s\times(1-liqD)+p}{debt}-1
+$$
+$$
+p = collateral \times abovePriceSegs
+$$
+$$
 s = collateral \times (\frac{softLiqUpperLimit-softLiqLowerLimit}{2})
-\end
 $$
 
 其中，
@@ -87,10 +89,22 @@ $$
 
 
 #### Borrow rate
-借贷利率(as interest rate)
+借贷利率(as the interest rate)是在任何给定时间在给定借贷市场中借款$STABL的成本，以 APR（不考虑复利）表示。利率是动态的，根据算法在市场变化时更新。
+动态利率的目的是确保$STABL作为稳定币与USD peg的稳定性。
+改变特定市场借贷利率主要有三种因素：
+1. 当前市场离其债务上限(debt ceiling)有多近，越接近债务上限，利率越高，反之亦然
+2. $STABL当前价格，如果STABL价高于1USD，则降低利率，反之亦然
+3. Stability Keepers有多少债务，债务越多，利率就越低，反之亦然
+
+**The borrow rate formula**
 
 
-### Liquidation
+
+$$
+
+$$
+
+### Liquidation & Stability Pool
 
 
 #### Liquidation logic
@@ -98,6 +112,9 @@ $$
 
 
 ### Earn & Stability Pool
+
+#### Stability Keeper
+
 
 
 ## Architecture
