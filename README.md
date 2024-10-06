@@ -16,7 +16,7 @@
 2. 可自定义抵押品市场，包括exotic tokens，NFT，RWA等
 3. 引入类违约互换机制，来对冲自定义市场的不确定性风险
 
-> 附：个人对defi协议设计的三原则：平衡、可持续和保持活性。
+> 附：个人对defi协议设计的三原则：平衡、健壮和保持活性。
 
 ## How it works
 
@@ -55,6 +55,8 @@ STABL是一种基于抵押的稳定币，这就是说STABL的价值由其他资�
 2. 转换过程中涉及交易费用。如果贷款进入转换状态，然后因为抵押品价格回升而退出，那么由于这些费用，当前贷款中剩余的抵押品会略少。
 
 #### Price segment
+> price segment功能类似于Uniswap V3 range 将流动性集中在两个价格之间。
+
 当创建一笔贷款时，该笔贷款的抵押品会被分散到流动性池中的多个价格段中，通过将抵押品分成不同的段，如果抵押品的价格达到清算价格，贷款就不必完全清算（与其他借贷协议一样），因为清算价格被 "分散 "在一定范围内，以降低风险。
 它们可以像在 AMM 流动性池中一样被交易回抵押品中，这取决于价格变动的方向。这可以保护用户免受短期价格波动的影响，否则可能会立即清算并关闭贷款，从而导致即时损失。
 
@@ -65,17 +67,29 @@ STABL是一种基于抵押的稳定币，这就是说STABL的价值由其他资�
 在创建贷款时，可以选择不同的段数（4 ~ 50），默认为10。
 较少段数可以提高资本效率，但如果抵押品价格下跌到段内，会一次转换更多的抵押品；更多段数则相反，转化会更细的进行，资本效率略低，更适合长期的"set-and-forget"偏好的贷款。
 
+```math
+priceSegment \approx \frac{price}{A} \\
+upperLimit = basePrice * (\frac{A-1}{A})^n \\
+lowerLimit = basePrice * (\frac{A-1}{A})^{n+1}
+```
+
+其中，
+- $basePrice$ 当前市场的基础价格
+- $A$ 段数，是一种市场的放大系数（default 10）
+- $n$ 段号
+
+
 ### Borrwing
 
 #### Loan health
 
-$$
+```math
 health = \frac{s\times(1-liqD)+p}{debt}-1 \\
 
 p = collateral \times abovePriceSegs \\
 
 s = collateral \times (\frac{softLiqUpperLimit-softLiqLowerLimit}{2})
-$$
+```
 
 其中，
 - $s$, 估算将所有存入抵押品按不同价格段进行转换后，有多少$STABL
@@ -96,22 +110,72 @@ $$
 
 **The borrow rate formula**
 
+```math
+r=rate0*e^{power}\\
+power = \frac{1-price}{sigma}-\frac{DebtFraction}{TargetFraction} \\
+DebtFraction = \frac{PegKeeperDebt}{TotalDebt}
+```
 
+其中：
+- $r$ 借贷利率
+- $rate0$ 预定义的基准利率
+- $price$ `PRICE_ORACLE.price()`，在计算借贷利率的同一网络上
+- $sigma$ 由 Governance 配置的变量，它决定了价格与 peg 的距离对借款利率的影响有多大, sigma会改变$STABL depeg时利率上升和下降的速度，如果sigma较高，$STABL depeg时利率上升会较慢。
+- $DebtFraction$ Stabl Keepers 的债务与市场债务的比率，在同一网络上计算借贷利率
+- $TargetFraction$ 是一个预定义值，用于确定 DebtFraction 对借贷利率的影响有多大
+- $StablKeeperDebt$ 是所有 Stabl Keeper 的债务，在同一网络上计算借贷利率
+- $TotalDebt$ 是所有市场的债务，在同一个网络上计算借贷利率
 
-$$
-
-$$
 
 ### Liquidation & Stability Pool
 
-
 #### Liquidation logic
+在转换模式特性的清算可视为以下几个阶段：
+- Soft Liquidation, 当部分抵押品转换为$STABL时
+- De-Liquidation, 当$STABL转换回抵押品时
+- (Hard) Liqudation, 所有抵押品都转换为$STABL,贷款关闭。
+
+
+**强制清算(hard liquidation)**
+
+真正的清算发生在当抵押品的价格跌破转换范围，而loan health低于0时发生，协议已无法管理贷款，因为抵押品无法覆盖超过该点的贷款，因此必须自动关闭贷款。这意味着即使抵押品的价格将来回升，转换模式也无法回购抵押品，因为它不再持有您的资金。
+
+
+**如何防止清算？**
+
+用户可在抵押品价格大幅下降至转换范围时采取主动行动，并在进入抵押品转换模式时积极偿还贷款。如果在贷款中添加更多抵押品，或部分偿还贷款，或两者兼而有之，在转换模式下偿还贷款将使你远离清算。
+
+**如何清算抵押品？**
+
+清算以价格区间为基础，而不是以单个用户为基础。
+
+清算通过套利方式来进行，只要`get_p ≠ price_oracle`就有套利机会。 
+- `price_oracle`：从price oracle合约中获取的抵押品价格。
+- `get_p`：CCM本身的预言机价格。
+
+**price_oracle decrease (soft liquidation)**
+`get_p < price_oracle`, 例如，如果`get_p`为 2000 且`price_oracle`为 2020，套利交易可以以 2000 的价格购买 ETH，然后在协议外以 2020 的价格出售。这个过程会降低区间内的 ETH（因为买入）并增加 STABL（因为卖出）。
+
+**price_oracle increase (de-liquidation)**
+`get_p > price_oracle`, 例如，如果`get_p`是2020，而是`price_oracle`2010，套利交易可以在协议外以 2010 的价格购买 ETH，然后在协议中以 2020 的价格出售。
+
+#### Stabl Keeper
+StablKeeper的任务就是尽可能将稳定池中的资产金额平衡在50/50，将 $STABL 稳定在peg 1USD。
+
+StablKeeper是专门用于维护STABL挂钩稳定性的合约，StablKeeper仅限于两个操作：从流动性池中depositing and withdrawing
+
+这些合约都与一个特定的流动性池相关联，其中包括 STABL 和另一种fiat-redeemable USD stablecoin。
+
+StablKeepers 的基本思想围绕监控 STABL 的价格和当前池的余额并采取相应的行动。当 STABL 的价格超过 1.0 时，表明向上偏离，StablKeepers 将他们的 STABL 存入当前池，作为交换，他们会收到 LP 代币。此操作增加了池内的 STABL 余额，从而对其价格施加下行压力并有助于稳定挂钩。
+
+相反，如果 STABL 价格跌破 1.0，表明向下偏离，则允许 StablKeepers 销毁他们的 LP 代币并从池中提取 STABL，以减少其中的余额并将价格推回平衡。这种withdrawal机制取决于 StablKeeper 之前是否将 STABL 存入池中，因为合约必须有 LP 代币才能在此过程中销毁。
+
+此外，任何 EOA 或智能合约都可以调用存入和提取 STABL 的`update`函数。
 
 
 
-### Earn & Stability Pool
 
-#### Stability Keeper
+### Earn
 
 
 
