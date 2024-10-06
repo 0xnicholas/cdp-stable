@@ -68,9 +68,13 @@ STABL是一种基于抵押的稳定币，这就是说STABL的价值由其他资�
 较少段数可以提高资本效率，但如果抵押品价格下跌到段内，会一次转换更多的抵押品；更多段数则相反，转化会更细的进行，资本效率略低，更适合长期的"set-and-forget"偏好的贷款。
 
 ```math
+\begin{aligned}
 priceSegment \approx \frac{price}{A} \\
+
 upperLimit = basePrice * (\frac{A-1}{A})^n \\
+
 lowerLimit = basePrice * (\frac{A-1}{A})^{n+1}
+\end{aligned}
 ```
 
 其中，
@@ -112,7 +116,9 @@ s = collateral \times (\frac{softLiqUpperLimit-softLiqLowerLimit}{2})
 
 ```math
 r=rate0*e^{power}\\
+
 power = \frac{1-price}{sigma}-\frac{DebtFraction}{TargetFraction} \\
+
 DebtFraction = \frac{PegKeeperDebt}{TotalDebt}
 ```
 
