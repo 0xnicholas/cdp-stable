@@ -35,6 +35,7 @@ STABL是一种基于抵押的稳定币，这就是说STABL的价值由其他资�
 
 
 ### Collateral Conversion Model
+
 当用户设置贷款时，他们决定存入多少抵押品和借入多少$STABL，这两个值决定了当前贷款的Conversion range（转换范围）。
 转换范围是您的抵押品可以出售以cover贷款健康的价格范围，反之如果抵押品价格上涨，也可以用于回购抵押品。
 如果抵押品的价格下跌得太快以至于您无法提前响应和调整贷款，CCM可以保护抵押品。
@@ -88,11 +89,13 @@ lowerLimit = basePrice * (\frac{A-1}{A})^{n+1}
 #### Loan health
 
 ```math
+\begin{aligned}
 health = \frac{s\times(1-liqD)+p}{debt}-1 \\
 
 p = collateral \times abovePriceSegs \\
 
 s = collateral \times (\frac{softLiqUpperLimit-softLiqLowerLimit}{2})
+\end{aligned}
 ```
 
 其中，
@@ -115,11 +118,13 @@ s = collateral \times (\frac{softLiqUpperLimit-softLiqLowerLimit}{2})
 **The borrow rate formula**
 
 ```math
+\begin{aligned}
 r=rate0*e^{power}\\
 
 power = \frac{1-price}{sigma}-\frac{DebtFraction}{TargetFraction} \\
 
 DebtFraction = \frac{PegKeeperDebt}{TotalDebt}
+\end{aligned}
 ```
 
 其中：
@@ -188,7 +193,26 @@ StablKeepers 的基本思想围绕监控 STABL 的价格和当前池的余额并
 ## Architecture
 
 
+
+
 ### Core contracts
+
+- `core/`: 核心协议合约
+- `base/`: 库和所有权逻辑
+- `periphery`: 外围辅助合约
+- `bridge`: 跨链相关(-LayerZero) 
+
+`core/CCM.sol` - 自动转换抵押品的再平衡做市合约，负责通过套利交易者根据市场条件清算和转换抵押品，每个市场有自己单独的CCM，其他包含抵押品和可借入资产交易对。
+
+`core/MainController.sol` - 主控
+
+`core/MarketOperator.sol` - 借贷市场相关操作
+
+`core/StablKeeper.sol` - 稳定池维护
+
+`core/price_oracles` - price of stablecoin in dollars(Chainlink) 
+
+`core/monetary_policies` - 货币市场参数，利率和相关参数控制
 
 
 ### Flow of [Collateral] in system
